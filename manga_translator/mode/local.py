@@ -73,14 +73,14 @@ class MangaTranslatorLocal(MangaTranslator):
             if not dest:
                 # Use the same folder as the source
                 p, ext = os.path.splitext(path)
-                _dest = f'{p}-translated.{file_ext or ext[1:]}'
+                _dest = f'{p}-clean.{file_ext or ext[1:]}'
             elif not os.path.basename(dest):
                 p, ext = os.path.splitext(os.path.basename(path))
                 # If the folders differ use the original filename from the source
                 if os.path.dirname(path) != dest:
                     _dest = os.path.join(dest, f'{p}.{file_ext or ext[1:]}')
                 else:
-                    _dest = os.path.join(dest, f'{p}-translated.{file_ext or ext[1:]}')
+                    _dest = os.path.join(dest, f'{p}-clean.{file_ext or ext[1:]}')
             else:
                 p, ext = os.path.splitext(dest)
                 _dest = f'{p}.{file_ext or ext[1:]}'
@@ -90,7 +90,7 @@ class MangaTranslatorLocal(MangaTranslator):
             # Determine destination folder path
             if path[-1] == '\\' or path[-1] == '/':
                 path = path[:-1]
-            _dest = dest or path + '-translated'
+            _dest = dest or (path + "/cleaned")
             if os.path.exists(_dest) and not os.path.isdir(_dest):
                 raise FileExistsError(_dest)
 
@@ -156,18 +156,19 @@ class MangaTranslatorLocal(MangaTranslator):
 
     async def _translate_file(self, path: str, dest: str, config: Config, ctx: Context) -> bool:
         if path.endswith('.txt'):
-            with open(path, 'r') as f:
+            return True;
+            """with open(path, 'r') as f:
                 queries = f.read().split('\n')
             translated_sentences = \
                 await dispatch_translation(config.translator.translator_gen, queries, self.use_mtpe, ctx,
-                                           'cpu' if self._gpu_limited_memory else self.device)
+                                           device='cpu' if self._gpu_limited_memory else self.device)
             p, ext = os.path.splitext(dest)
             if ext != '.txt':
                 dest = p + '.txt'
             logger.info(f'Saving "{dest}"')
             with open(dest, 'w') as f:
                 f.write('\n'.join(translated_sentences))
-            return True
+            return True"""
 
         # TODO: Add .gif handler
 
@@ -200,14 +201,14 @@ class MangaTranslatorLocal(MangaTranslator):
                 await self._report_progress('saved', True)
 
                 if self.save_text or self.save_text_file or self.prep_manual:
-                    if self.prep_manual:
+                    #if self.prep_manual:
                         # Save original image next to translated
-                        p, ext = os.path.splitext(dest)
-                        img_filename = p + '-orig' + ext
-                        img_path = os.path.join(os.path.dirname(dest), img_filename)
-                        img.save(img_path, quality=self.save_quality)
-                    if self.text_regions:
-                        self._save_text_to_file(path, ctx)
+                        #p, ext = os.path.splitext(dest)
+                        #img_filename = p + '-orig' + ext
+                        #img_path = os.path.join(os.path.dirname(dest), img_filename)
+                        #img.save(img_path, quality=self.save_quality)
+                    if ctx.text_regions:
+                        self._save_text_to_json(path, ctx)
                 return True
         return False
 
@@ -243,5 +244,28 @@ class MangaTranslatorLocal(MangaTranslator):
         if not text_output_file:
             text_output_file = os.path.splitext(image_path)[0] + '_translations.txt'
 
-        with open(text_output_file, 'a', encoding='utf-8') as f:
+        with open(text_output_file, 'w', encoding='utf-8') as f:
             f.write(s)
+
+    def _save_text_to_json(self, image_path: str, ctx: Context):
+        output = {'blocks': []};
+        for i, region in enumerate(ctx.text_regions):
+            block = {};
+            block['box'] = [int(region.lines[-1][0][0]), int(region.lines[-1][0][1]),
+                int(region.lines[0][2][0]), int(region.lines[0][2][1])
+            ];
+            
+            block['lines_coords'] = [str(a) for a in list(region.lines)];
+            block['lines'] = region.text;
+            block['trans'] = region.translation;
+            output['blocks'].append(block);
+
+        text_output_file = self.text_output_file
+        if not text_output_file:
+            path = os.path.dirname(image_path);
+            text_output_file = os.path.splitext(image_path)[0] + '.json'
+            text_output_file = replace_prefix(text_output_file, path, path + "/_ocr");
+            os.makedirs(os.path.dirname(text_output_file));
+
+        with open(text_output_file, 'w', encoding='utf-8') as f:
+            json.dump(output, f, indent=4, ensure_ascii=False);

@@ -592,12 +592,12 @@ class MangaTranslator:
                 translated_sentences = ["" for _ in ctx.text_regions]  
 
             # Save translation if args.save_text is set and quit  
-            if self.save_text:  
-                input_filename = os.path.splitext(os.path.basename(self.input_files[0]))[0]  
-                with open(self._result_path(f"{input_filename}_translations.txt"), "w") as f:  
-                    json.dump(translated_sentences, f, indent=4, ensure_ascii=False)  
-                print("Don't continue if --save-text is used")  
-                exit(-1)  
+            #if self.save_text:  
+            #    input_filename = os.path.splitext(os.path.basename(self.input_files[0]))[0]  
+            #    with open(self._result_path(f"{input_filename}_translations.txt"), "w") as f:  
+            #        json.dump(translated_sentences, f, indent=4, ensure_ascii=False)  
+            #    print("Don't continue if --save-text is used")  
+            #    exit(-1)  
 
         # 如果不是none翻译器或者是none翻译器但没有prep_manual  
         # If not none translator or none translator without prep_manual  
@@ -829,6 +829,8 @@ class MangaTranslator:
     async def _run_text_rendering(self, config: Config, ctx: Context):
         current_time = time.time()
         self._model_usage_timestamps[("rendering", config.render.renderer)] = current_time
+        output = ctx.img_inpainted;
+        return output;
         if config.render.renderer == Renderer.none:
             output = ctx.img_inpainted
         # manga2eng currently only supports horizontal left to right rendering
