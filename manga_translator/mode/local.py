@@ -196,24 +196,21 @@ class MangaTranslatorLocal(MangaTranslator):
                 return True
             if result:
                 logger.info(f'Saving "{dest}"')
+
+                # output text to json files first
+                if ctx.text_regions:
+                    self._save_text_to_json(path, ctx)
+
                 ctx.save_quality = self.save_quality
                 save_result(result, dest, ctx)
                 await self._report_progress('saved', True)
-
-                if self.save_text or self.save_text_file or self.prep_manual:
-                    #if self.prep_manual:
-                        # Save original image next to translated
-                        #p, ext = os.path.splitext(dest)
-                        #img_filename = p + '-orig' + ext
-                        #img_path = os.path.join(os.path.dirname(dest), img_filename)
-                        #img.save(img_path, quality=self.save_quality)
-                    if ctx.text_regions:
-                        self._save_text_to_json(path, ctx)
                 return True
         return False
 
+
     def _save_text_to_file(self, image_path: str, ctx: Context):
         cached_colors = []
+
 
         def identify_colors(fg_rgb: List[int]):
             idx = 0
@@ -247,6 +244,7 @@ class MangaTranslatorLocal(MangaTranslator):
         with open(text_output_file, 'w', encoding='utf-8') as f:
             f.write(s)
 
+
     def _save_text_to_json(self, image_path: str, ctx: Context):
         output = {'blocks': []};
         for i, region in enumerate(ctx.text_regions):
@@ -265,7 +263,7 @@ class MangaTranslatorLocal(MangaTranslator):
             path = os.path.dirname(image_path);
             text_output_file = os.path.splitext(image_path)[0] + '.json'
             text_output_file = replace_prefix(text_output_file, path, path + "/_ocr");
-            os.makedirs(os.path.dirname(text_output_file));
+            os.makedirs(os.path.dirname(text_output_file), exist_ok=True);
 
         with open(text_output_file, 'w', encoding='utf-8') as f:
             json.dump(output, f, indent=4, ensure_ascii=False);
