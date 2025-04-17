@@ -82,6 +82,8 @@ def gimp_render(out_file, ctx: Context):
     else:
         ctx.text_regions = []
 
+    ctx.text_regions = [];
+
     filtered_text_regions = [
         text_region for text_region in ctx.text_regions if text_region.translation != ""
     ]
@@ -180,6 +182,7 @@ def gimp_batch(script):
         stderr=subprocess.PIPE,
         universal_newlines=True,
     )
+    return;
 
     print("=== Output")
     print(result.stdout)
